@@ -1,0 +1,185 @@
+//
+//  YSSCPrefixHeader.pch
+//  YSSCIOS
+//
+//  Created by 张永亮 on 16/8/8.
+//  Copyright © 2016年 zzz. All rights reserved.
+//
+
+#ifndef YSSCPrefixHeader_pch
+#define YSSCPrefixHeader_pch
+
+#import "YSSCTypeDef.h"
+
+/*
+ Controller头文件
+ */
+#import "LoginViewController.h"//登录页
+#import "RegisterViewController.h"//注册新账号页
+#import "ReplaceTestWordViewController.h"//重置密码页
+#import "SettingViewController.h"       //设置页面
+#import "WithdrawViewController.h"      //提现页面
+#import "AccountDetailListViewController.h"//提现明细界面
+#import "HomeViewController.h"//首页
+#import "MallViewController.h"//商城首页
+#import "GoodsDetailViewController.h"//商品详情页
+#import "MallGoodsDetailImageViewController.h"//商品图文详情页
+#import "MallGoodsCommentViewController.h"//商品评论页面
+#import "MallBussViewController.h"//商铺页面
+#import "MallSearchListViewController.h"    //搜索商品界面
+#import "MallBussIntroViewController.h"//商家简介
+#import "MallBussRankViewController.h"//商家分类
+#import "MallPayFinishedViewController.h"//支付完成页
+#import "MallSumbitOrderViewController.h"//提交订单页
+#import "MallPayViewController.h"//商品支付页
+#import "MallShopGoodsListViewController.h"//店铺分类商品页面
+#import "SurroundingAreaViewController.h"//周边首页
+#import "SurroundingAreaItemDetailViewController.h"//周边商家详情页
+#import "SurroundingAreaCommentListViewController.h"//周边商家评论查看页面
+#import "CommonPushCommentViewController.h"         //通用点评界面
+#import "TravelDiaryViewController.h"//游记首页
+#import "TravelDetailViewController.h"//游记详情页
+#import "TravelDiaryEditViewController.h"//游记编辑页
+#import "TravelJugeViewController.h"//游记评论展示页
+#import "UserViewController.h"//个人页首页
+#import "HotelViewController.h"//乡宿首页
+#import "HotelDetailViewController.h"//乡宿详情页
+#import "DatePickerViewController.h"//日期选择页
+
+/*
+ View头文件
+ */
+#pragma mark ----------------登录模块
+
+#import "YSSTextFied.h"//手机号。密码等自定义输入框--通用组件
+#import "JKCountDownButton.h"//获取验证码按钮
+
+#pragma mark ----------------首页乡宿模块
+
+#import "HomeTableViewCell.h"//首页列表Cell
+#import "HotelDetailCell.h"//乡宿详情页cell
+#import "HotelDetailChooseView.h"//乡宿详情页带滑块选择视图
+#import "HotelDetailTopView.h"//乡宿详情页顶部视图
+#import "HotelChooseCell.h"//乡宿主页选择日期
+#import "HotelTableviewCell.h"//乡宿主要cell
+#import "YSSBlockUserButton.h"//方形block回调按钮
+#import "YSSGreenBorderButton.h"//绿色边框按钮
+#import "YSSChooseDateButton.h"//日期选择按钮
+#import "YSSNavView.h"//乡宿页和用户页的自定义导航栏
+
+#pragma mark ----------------商城模块
+
+#import "MallCollectionViewCell.h"//商城列表Cell
+#import "STL_DropDownMenu.h"                                                //下拉菜单
+#import "MallTopView.h"//商城顶部视图--通用组件
+#import "MallTabView.h"//商品详情底部标签栏
+#import "MallTabButton.h"//商品详情底部标签按钮
+#import "MallGoodsDetailContentView.h"//商品详情中间内容部分
+#import "MallGoodsDetailParameView.h"//产品参数
+#import "MallGoodsDetailParameTableViewCell.h"//产品参数列表cell
+#import "MallGoodsDetailRankView.h"//选择产品规格
+#import "MallJugeTableViewCell.h"//评论cell
+#import "MallJugeStarView.h"//评论用户星级
+#import "MallGoodsDetailBussHeadView.h"//商铺名片
+#import "MallBussTopView.h"//商铺首页顶部视图
+#import "MallBussHomeTableViewCell.h"//商铺首页块
+#import "MallBussAllGoodsTableViewCell.h"//商铺全部宝贝快
+#import "MallBussMessTableViewCell.h"//商铺动态块
+#import "MallBussMessInfoTableViewCell.h"//商家动态Cell
+#import "MallBussAllGoodsCollectionReusableView.h"//商铺全部宝贝头视图
+#import "MallBussInfoTableViewCell.h"//商铺简介
+#import "MallBussIntroTableViewCell.h"//商铺简介头
+#import "MallPayTableViewCell.h"//支付cell
+#import "MallCreateOrderTableViewCell.h"//提交订单页cell
+#import "MallSearchTableViewCell.h" //搜索cell
+
+#pragma mark ----------------周边模块
+
+#import "SurroundAreaItemView.h"
+#import "SurroundingAreaHeadView.h"//周边首页头部视图
+#import "SurroundingAreaTableViewCell.h"//评论
+
+
+#pragma mark ----------------游记模块
+
+#import "TravelDiaryTableViewCell.h"
+#import "TravelCommentView.h"//评论组件
+#import "TravelJugeTableViewCell.h"//评论cell
+/*
+ 业务逻辑相关头文件
+ */
+#import "BusinessManager.h"
+#import "UserManager.h"
+#import "LoginManager.h"
+#import "MallManager.h"
+#import "HotelManager.h"
+#import "ArroundingAreaManager.h"
+#import "TravelManager.h"
+
+
+
+
+#import "YSSCConstant.h"
+
+/*
+ model头文件引入
+ */
+#import "ServerStatusObject.h"//基础模型
+
+#pragma mark ----------------登录模块
+
+#import "LoginObject.h"//登录模型
+
+
+#pragma mark ----------------商城模块
+#import "STL_ClassifyModel.h" //商城分类模型
+#import "STL_ClassifyLimitModel.h" //筛选模型
+#import "STL_GoodsModel.h"          //商品模型
+#import "STL_GoodsDetailBaseModel.h"//商品详情模型
+#import "MallJugeModel.h"           //商品评论模型
+#import "MallShopCommentModel.h"    //商铺动态模型
+
+#pragma mark ----------------周边模型
+#import "SurroundingAreaModel.h"    //游周边列表模型
+#import "YSSCPointAnnotation.h"     //标注点
+#import "SurroundingAreaBussDetailModel.h"//详情模型
+
+#pragma mark ----------------游记模型
+#import "TravelListModel.h"         //游记列表模型
+#import "TravelCommentModel.h"      //游记评论模型
+
+
+/*
+ 类别头文件
+ */
+#import "NSArray+Properties.h"
+#import "NSString+Hashing.h"
+#import "UIScrollView+UITouch.h"
+#import "UIImage+Image.h"
+#import "NSDictionary+Log.h"
+
+/*
+ 第三方头文件导入
+ */
+#import <SDAutoLayout.h>//第三方自动布局
+#import <SDCycleScrollView.h>//自动轮播视图
+#import <MJRefresh.h>//第三方刷新
+#import <MJExtension.h>//模型
+#import <BaiduMapAPI_Base/BMKBaseComponent.h>//引入base相关所有的头文件
+#import <BaiduMapAPI_Map/BMKMapComponent.h>//引入地图功能所有的头文件
+#import <BaiduMapAPI_Search/BMKSearchComponent.h>//引入检索功能所有的头文件
+#import <BaiduMapAPI_Cloud/BMKCloudSearchComponent.h>//引入云检索功能所有的头文件
+#import <BaiduMapAPI_Location/BMKLocationComponent.h>//引入定位功能所有的头文件
+#import <BaiduMapAPI_Utils/BMKUtilsComponent.h>//引入计算工具所有的头文件
+#import <BaiduMapAPI_Radar/BMKRadarComponent.h>//引入周边雷达功能所有的头文件
+#import <UIImageView+WebCache.h>//SD_WebImage
+#import <SDWebImage/UIButton+WebCache.h>
+#import <SVProgressHUD.h>
+#import "WXApi.h"                       //微信支付
+#import <AlipaySDK/AlipaySDK.h>         //支付宝支付
+#import "UMSocialUIManager.h"           //友盟分享
+#import <UMSocialCore/UMSocialCore.h>
+#import "GeTuiSdk.h"     // GetuiSdk头文件，需要使用的地方需要添加此代码
+
+
+#endif /* YSSCPrefixHeader_pch */

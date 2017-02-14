@@ -1,0 +1,698 @@
+//
+//  MallPayViewController.m
+//  YSSCIOS
+//
+//  Created by 李明星 on 16/8/25.
+//  Copyright © 2016年 zzz. All rights reserved.
+//
+
+#import "MallPayViewController.h"
+#import "HotelWXPayObject.h"//微信支付类
+#import "HotelAliPayObject.h"//支付宝支付类
+#import "HomeAdWebViewController.h"
+
+@interface MallPayViewController ()
+<
+    UITableViewDelegate,
+    UITableViewDataSource,
+    WXApiDelegate
+>
+
+@property (nonatomic, strong) MallTopView *topView;
+
+@property (nonatomic, strong) UIView *firstView;
+@property (nonatomic, strong) UILabel *orderPriceTitleLb;//订单总价标题
+@property (nonatomic, strong) UILabel *orderPriceLb;//订单总价
+
+
+@property (nonatomic, strong) UIView *secondView;
+@property (nonatomic, strong) UILabel *noticeLb;//提醒话语
+
+
+@property (nonatomic, strong) UIView *thirdView;
+@property (nonatomic, strong) UILabel *leftTimeTitleLb;//剩余时间标题
+@property (nonatomic, strong) UILabel *leftTimeLb;//剩余时间
+
+
+
+@property (nonatomic, strong) UIView *fourthView;
+@property (nonatomic, strong) UILabel *fiveShellTitleLb;//五云珠标题
+@property (nonatomic, strong) UILabel *fiveShellLb;//五云珠
+@property (nonatomic, strong) UISwitch *useShellSwi;//五云珠开关
+
+
+
+
+@property (nonatomic, strong) UIView *fifthView;
+@property (nonatomic, strong) UILabel *payStyleLb;//支付方式
+
+
+@property (nonatomic, strong) UITableView *payTableView;
+@property (nonatomic, strong) NSMutableArray *payStyleData;//支付方式数据源
+
+
+@property (nonatomic, strong) UIButton *payBtn;
+
+
+@property (nonatomic, weak) NSTimer *timer;//定时器
+@property (nonatomic, assign) NSInteger second;//剩余秒数  暂定1800秒
+
+/** 支付方式 0 == 支付宝  1== 微信 2== 银联 默认支付宝*/
+@property (nonatomic, assign) NSInteger payStatus;
+
+@property (nonatomic, assign) BOOL isUseFiveShell;//是否使用五云珠支付
+
+
+
+@end
+
+@implementation MallPayViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = GRAYCOLOR;
+    
+    [self.view addSubview:self.topView];
+    [self.view addSubview:self.firstView];
+    [self.view addSubview:self.secondView];
+    [self.view addSubview:self.thirdView];
+    [self.view addSubview:self.fourthView];
+    [self.view addSubview:self.fifthView];
+    [self.view addSubview:self.payTableView];
+    [self.view addSubview:self.payBtn];
+    _second = 1800;
+    _payStyleData = [[NSMutableArray alloc] initWithObjects:@"支付宝", @"微信",@"银联", nil];
+    [self.timer fire];
+    
+    [YSSCNotificationCenter addObserver:self selector:@selector(getPayResult:) name:@"payResult" object:nil];//注册通知中心处理支付回调结果
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)dealloc{
+    if (_timer.isValid) {
+        [_timer invalidate];
+        _timer = nil;
+    }
+    [YSSCNotificationCenter removeObserver:self];
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = YES;
+    self.tabBarController.tabBar.hidden = YES;
+    
+    self.topView.sd_layout
+    .topSpaceToView(self.view, 0)
+    .leftSpaceToView(self.view, 0)
+    .rightSpaceToView(self.view, 0)
+    .heightIs(64);
+    
+    self.firstView.sd_layout
+    .topSpaceToView(self.topView, 10)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(45);
+    [self autoLayoutFirstViewSubViews];
+    
+    self.secondView.sd_layout
+    .topSpaceToView(self.firstView, 0.5)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(45);
+    [self autoLayoutSecondViewSubViews];
+
+    
+    self.thirdView.sd_layout
+    .topSpaceToView(self.secondView, 0.5)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(45);
+    [self autoLayoutThirdViewSubViews];
+    
+    self.fourthView.sd_layout
+    .topSpaceToView(self.thirdView, 10)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(45);
+    [self autoLayoutFourthViewSubViews];
+    
+    self.fifthView.sd_layout
+    .topSpaceToView(self.fourthView, 0.5)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(45);
+    [self autoLayoutFifthViewSubViews];
+    
+    self.payTableView.sd_layout
+    .topSpaceToView(self.fifthView, 0.5)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(180);
+    
+    self.payBtn.sd_layout
+    .bottomSpaceToView(self.view, 0)
+    .leftEqualToView(self.topView)
+    .rightEqualToView(self.topView)
+    .heightIs(49);
+
+}
+
+- (void)viewDidAppear:(BOOL)animated{
+
+    [self.useShellSwi setOn:YES];//默认打开余额支付，不管余额多少
+    _isUseFiveShell = YES;
+    BOOL ret = [self okUseBlanceMoneyPayForOrder];
+    if (ret) {
+        //余额足以支付//关闭支付方式
+        [YSSCNotificationCenter postNotificationName:@"payNoti" object:nil userInfo:@{@"isOpen":@0}];
+    }else{
+        //余额不足以支付//打开支付方式
+        [YSSCNotificationCenter postNotificationName:@"payNoti" object:nil userInfo:@{@"isOpen":@1}];
+    }
+
+}
+#pragma mark ----------------布局
+
+- (void)autoLayoutFirstViewSubViews{
+    self.orderPriceTitleLb.sd_layout
+    .centerYEqualToView(self.firstView)
+    .leftSpaceToView(self.firstView, 15)
+    .autoHeightRatio(0);
+    [self.orderPriceTitleLb setSingleLineAutoResizeWithMaxWidth:200];
+    
+    self.orderPriceLb.sd_layout
+    .centerYEqualToView(self.orderPriceTitleLb)
+    .rightSpaceToView(self.firstView, 15)
+    .autoHeightRatio(0);
+    [self.orderPriceLb setSingleLineAutoResizeWithMaxWidth:200];
+}
+
+- (void)autoLayoutSecondViewSubViews{
+    self.noticeLb.sd_layout
+    .centerYEqualToView(self.secondView)
+    .leftSpaceToView(self.secondView, 15)
+    .autoHeightRatio(0);
+    [self.noticeLb setSingleLineAutoResizeWithMaxWidth:400];
+}
+- (void)autoLayoutThirdViewSubViews{
+    self.leftTimeTitleLb.sd_layout
+    .centerYEqualToView(self.thirdView)
+    .leftSpaceToView(self.thirdView, 15)
+    .autoHeightRatio(0);
+    [self.leftTimeTitleLb setSingleLineAutoResizeWithMaxWidth:200];
+    
+    self.leftTimeLb.sd_layout
+    .centerYEqualToView(self.leftTimeTitleLb)
+    .leftSpaceToView(self.leftTimeTitleLb, 5)
+    .autoHeightRatio(0);
+    [self.leftTimeLb setSingleLineAutoResizeWithMaxWidth:400];
+}
+- (void)autoLayoutFourthViewSubViews{
+    
+    self.fiveShellTitleLb.sd_layout
+    .centerYEqualToView(self.fourthView)
+    .leftSpaceToView(self.fourthView, 15)
+    .autoHeightRatio(0);
+    [self.fiveShellTitleLb setSingleLineAutoResizeWithMaxWidth:200];
+    
+    self.fiveShellLb.sd_layout
+    .centerYEqualToView(self.fiveShellTitleLb)
+    .leftSpaceToView(self.fiveShellTitleLb, 12)
+    .autoHeightRatio(0);
+    [self.fiveShellLb setSingleLineAutoResizeWithMaxWidth:200];
+    
+    self.useShellSwi.sd_layout
+    .centerYEqualToView(self.fiveShellLb)
+    .rightSpaceToView(self.fourthView, 15)
+    .widthIs(50)
+    .heightIs(30);
+    
+}
+- (void)autoLayoutFifthViewSubViews{
+    self.payStyleLb.sd_layout
+    .centerYEqualToView(self.fifthView)
+    .leftSpaceToView(self.fifthView, 15)
+    .autoHeightRatio(0);
+    [self.payStyleLb setSingleLineAutoResizeWithMaxWidth:200];
+}
+
+
+#pragma mark ----------------tableViewDelegate
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.payStyleData.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    MallPayTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
+    [cell setInfoWith:self.payStyleData[indexPath.row]];
+    cell.block = ^(NSString *str){
+        if ([str isEqualToString:@"支付宝"]) {
+            self.payStatus = 0;
+        }else if([str isEqualToString:@"微信"]){
+            self.payStatus = 1;
+        }else if ([str isEqualToString:@"银联"]){
+            _payStatus = 2;
+        }
+    };
+    return cell;
+
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 60;
+}
+
+
+#pragma mark ----------------点击事件
+
+- (void)payAction{
+    [SVProgressHUD showWithStatus:@"正在支付"];
+    //先判断五云珠是否打开
+    //如果打开。判断余额是否足以支付订单
+    //如果余额足以支付订单。调用余额支付
+    //如果余额不足以支付订单。调用当前选中支付方式支付订单金额减去余额剩下金额
+    BOOL ret = [self okUseBlanceMoneyPayForOrder];
+
+    
+    if (_isUseFiveShell) {
+        //使用余额支付
+        if (ret) {
+            //余额足以支付订单金额
+            //此处调用余额支付
+            [self payWithUseFiveShell];
+        }else{
+            //余额不足以支付
+            [self payWithBlanceMoney];
+        }
+    }else{
+        //不使用余额支付
+        //使用当前选中支付方式支付
+        [self payWithBlanceMoney];
+    }
+
+}
+
+- (void)payWithUseFiveShell{
+    YSSCWeakObj(self);
+    NSDictionary *dict = @{@"orderNo":self.orderNum,
+                           @"balance":self.totalPrice};
+    [YSSCShareBusinessManager.mallManager balancePayOrderWithParameters:dict
+                                                                success:^(id responObject) {
+                                                                    [SVProgressHUD dismiss];
+                                                                    
+                                                                    MallPayFinishedViewController *finishVc = [[MallPayFinishedViewController alloc] init];
+                                                                    finishVc.isHotel = NO;
+                                                                    finishVc.orderPrice = weakself.totalPrice;
+                                                                    [weakself.navigationController pushViewController:finishVc animated:YES];
+
+                                                                } failure:^(NSInteger errCode, NSString *errorMsg) {
+                                                                    [SVProgressHUD showErrorWithStatus:errorMsg];
+                                                                }];
+}
+
+- (void)payWithBlanceMoney{
+    //进入此方法只有两种情况。
+    //1 使用余额支付。但余额不足
+    //2 未使用余额支付
+    NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+    
+    if (_isUseFiveShell) {
+        //使用了余额支付
+        [dict setValue:_blancePrice forKey:@"balance"];
+    }else{
+        [dict setValue:@"0" forKey:@"balance"];
+    }
+    
+    [dict setValue:_orderNum forKey:@"orderNo"];
+    
+    
+    switch (_payStatus) {
+        case 0:
+        {
+            //使用支付宝支付
+//            [SVProgressHUD showErrorWithStatus:@"暂未开通此功能，请选择微信支付"];
+//            [YSSCShareBusinessManager.hotelManger getHotelAliPayWithDictionary:dict success:^(id object) {
+//                [SVProgressHUD dismiss];
+//
+//                HotelAliPayObject *aliPay = object;
+//                if (![aliPay.errorCode isEqualToNumber:@1]) {
+//                    [SVProgressHUD showErrorWithStatus:aliPay.errorMsg];
+//                    return ;
+//                }
+//                
+//                //调起支付宝支付
+//                [[AlipaySDK defaultService] payOrder:aliPay.data fromScheme:@"wx1a4a9ddd53f79edb" callback:^(NSDictionary *resultDic) {
+//                    NSLog(@"支付结果返回： %@", resultDic);
+//                }];
+//            } failure:^(NSInteger errCode, NSString *errorMsg) {
+//                [SVProgressHUD showErrorWithStatus:errorMsg];
+//            }];
+//            [YSSCShareBusinessManager.hotelManger getWapAliPayWithDictionary:dict success:^(id object) {
+//                
+//            } failure:^(NSInteger errCode, NSString *errorMsg) {
+//                
+//            }];
+            //临时
+#warning 正式版需要改地址
+            NSString *urlStr = [NSString stringWithFormat:@"http://115.236.69.110:8458/mountainVillage/app/alipay/aliWapPay?orderNo=%@&balance=%@",dict[@"orderNo"],dict[@"balance"]];
+            HomeAdWebViewController *webVC = [[HomeAdWebViewController alloc] init];
+            webVC.url = [NSURL URLWithString:urlStr];
+            [SVProgressHUD dismiss];
+            [self.navigationController pushViewController:webVC animated:YES];
+            
+            
+//            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:urlStr]];
+        }
+            break;
+        case 1:
+        {
+            //使用微信
+            [SVProgressHUD dismiss];
+            [self alertViewWithTitle:@"提醒" message:@"暂未开通微信支付，敬请期待"];
+
+//            [YSSCShareBusinessManager.hotelManger getHotelWXPayWithDictionary:dict success:^(id object) {
+//                [SVProgressHUD dismiss];
+//                
+//                HotelWXPayObject *wxPayObject = object;
+//                
+//                if (![wxPayObject.errorCode isEqualToNumber:@1]) {
+//                    [SVProgressHUD showErrorWithStatus:wxPayObject.errorMsg];
+//                    return ;
+//                }
+//                
+//                
+//                PayReq *req   = [[PayReq alloc] init];
+//                req.partnerId = wxPayObject.data.partnerid;
+//                req.prepayId  = wxPayObject.data.prepayid;
+//                req.package   = wxPayObject.data.package;
+//                req.nonceStr  = wxPayObject.data.noncestr;
+//                NSString * stamp = wxPayObject.data.timestamp;
+//                req.timeStamp = stamp.intValue;
+//                req.sign = wxPayObject.data.sign;
+//                [WXApi sendReq:req];
+//            
+//                
+//            } failure:^(NSInteger errCode, NSString *errorMsg) {
+//                [SVProgressHUD showErrorWithStatus:errorMsg];
+//            }];
+
+        }
+            break;
+        case 2:
+        {
+            [SVProgressHUD dismiss];
+            [self alertViewWithTitle:@"提醒" message:@"暂未开通银联支付,敬请期待"];
+        }
+            break;
+        default:
+            break;
+    }
+}
+
+/***********************************************
+ 函数名称 : alertViewWithTitle:
+ 函数秒数 ：弹窗提醒
+ 输入参数 : str
+ 输出参数 :
+ 返回值 :
+ 作者 :     李明星
+ ***********************************************/
+- (void)alertViewWithTitle:(NSString *)title message:(NSString *)message{
+    UIAlertController *alertVc = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *action = [UIAlertAction actionWithTitle:@"我知道了" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [alertVc dismissViewControllerAnimated:YES completion:nil];
+    }];
+    if ([[UIDevice currentDevice] systemVersion].floatValue >= 8.0) {
+        [action setValue:MALLColor forKey:@"_titleTextColor"];
+    }
+    [alertVc addAction:action];
+    [self presentViewController:alertVc animated:YES completion:nil];
+    
+}
+
+
+- (void)useFiveShellAction:(UISwitch *)sender{
+    _isUseFiveShell = sender.isOn;//开启和关闭五云珠支付
+    BOOL ret = [self okUseBlanceMoneyPayForOrder];
+    
+    if (sender.isOn) {
+        //余额支付打开
+        if (ret) {
+            //余额足以支付//关闭支付方式
+            [YSSCNotificationCenter postNotificationName:@"payNoti" object:nil userInfo:@{@"isOpen":@0}];
+        }else{
+            //余额不足以支付//打开支付方式
+            [YSSCNotificationCenter postNotificationName:@"payNoti" object:nil userInfo:@{@"isOpen":@1}];
+        }
+    }else{
+        //余额支付关闭//打开支付方式
+        [YSSCNotificationCenter postNotificationName:@"payNoti" object:nil userInfo:@{@"isOpen":@1}];
+        
+    }
+
+}
+
+- (BOOL)okUseBlanceMoneyPayForOrder{
+    
+    return _blancePrice.floatValue > _totalPrice.floatValue;
+    
+}
+
+#pragma mark ----------------统一支付结果结果回调
+- (void)getPayResult:(NSNotification *)notification{
+    //获取支付结果
+    YSSCWeakObj(self);
+    NSDictionary *dict = notification.userInfo;
+    int code = [dict[@"code"] intValue];
+    
+    switch (code) {
+        case 0:{
+            [SVProgressHUD dismiss];
+            MallPayFinishedViewController *finishVc = [[MallPayFinishedViewController alloc] init];
+            finishVc.isHotel = NO;
+            finishVc.orderPrice = weakself.totalPrice;
+            [weakself.navigationController pushViewController:finishVc animated:YES];
+        }
+            break;
+        case (-1):{
+            [SVProgressHUD showErrorWithStatus:@"支付失败"];
+        }
+            break;
+        case (-2):
+        {
+            [SVProgressHUD showErrorWithStatus:@"取消支付"];
+        }
+            break;
+        default:
+            break;
+    }
+
+}
+
+
+#pragma mark ----------------定时器动作
+
+- (void)timeFire:(id)userInfo{
+    _second -= 1;
+    if (_second ==  -1) {
+        [_timer invalidate];
+        _timer = nil;
+        return;
+    }
+    self.leftTimeLb.text = [NSString stringWithFormat:@"%.2ld:%.2ld",_second / 60, _second % 60];
+}
+
+
+#pragma mark ----------------实例化
+
+- (MallTopView *)topView{
+    if (_topView == nil) {
+        _topView = [[MallTopView alloc] init];
+        [_topView setTitleText:@"订单支付" imageArrays:nil selecterArys:nil target:nil isShowLeftBtn:YES];
+        YSSCWeakObj(self);
+        _topView.block = ^(){
+            [weakself.navigationController popViewControllerAnimated:YES];
+        };
+    }
+    return _topView;
+}
+
+- (UIView *)firstView{
+    if (_firstView == nil) {
+        _firstView = [[UIView alloc] init];
+        _firstView.backgroundColor = WHITECOLOR;
+        [_firstView addSubview:self.orderPriceTitleLb];
+        [_firstView addSubview:self.orderPriceLb];
+    }
+    return _firstView;
+}
+
+- (UIView *)secondView{
+    if (_secondView == nil) {
+        _secondView = [[UIView alloc] init];
+        _secondView.backgroundColor = WHITECOLOR;
+        [_secondView addSubview:self.noticeLb];
+    }
+    return _secondView;
+}
+
+- (UIView *)thirdView{
+    if (_thirdView == nil) {
+        _thirdView = [[UIView alloc] init];
+        _thirdView.backgroundColor = WHITECOLOR;
+        [_thirdView addSubview:self.leftTimeTitleLb];
+        [_thirdView addSubview:self.leftTimeLb];
+    }
+    return _thirdView;
+}
+
+- (UIView *)fourthView{
+    if (_fourthView == nil) {
+        _fourthView = [[UIView alloc] init];
+        _fourthView.backgroundColor = WHITECOLOR;
+        [_fourthView addSubview:self.fiveShellTitleLb];
+        [_fourthView addSubview:self.fiveShellLb];
+        [_fourthView addSubview:self.useShellSwi];
+    }
+    return _fourthView;
+}
+
+- (UIView *)fifthView{
+    if (_fifthView == nil) {
+        _fifthView = [[UIView alloc] init];
+        _fifthView.backgroundColor = WHITECOLOR;
+        [_fifthView addSubview:self.payStyleLb];
+    }
+    return _fifthView;
+}
+
+- (UITableView *)payTableView{
+    if (_payTableView == nil) {
+        _payTableView = [[UITableView alloc] init];
+        _payTableView.backgroundColor = WHITECOLOR;
+        _payTableView.separatorColor = GRAYCOLOR;
+        _payTableView.delegate = self;
+        _payTableView.dataSource = self;
+        [_payTableView registerClass:[MallPayTableViewCell class] forCellReuseIdentifier:@"cell"];
+    }
+    return _payTableView;
+}
+
+- (UIButton *)payBtn{
+    if (_payBtn == nil) {
+        _payBtn = [[UIButton alloc] init];
+        _payBtn.backgroundColor = MALLColor;
+        _payBtn.titleLabel.font = FONT(14);
+        [_payBtn setTitleColor:WHITECOLOR forState:UIControlStateNormal];
+        [_payBtn setTitle:@"确认付款" forState:UIControlStateNormal];
+        [_payBtn addTarget:self action:@selector(payAction) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _payBtn;
+}
+
+- (UILabel *)orderPriceTitleLb{
+    if (_orderPriceTitleLb == nil) {
+        _orderPriceTitleLb = [[UILabel alloc] init];
+        _orderPriceTitleLb.font = FONT(14);
+        _orderPriceTitleLb.textColor = BLACKTEXTCOLOR;
+        _orderPriceTitleLb.text = @"订单总价";
+    }
+    return _orderPriceTitleLb;
+}
+
+- (UILabel *)orderPriceLb{
+    if (_orderPriceLb == nil) {
+        _orderPriceLb = [[UILabel alloc] init];
+        _orderPriceLb.font = FONT(17);
+        _orderPriceLb.textColor = MALLColor;
+        _orderPriceLb.text = [NSString stringWithFormat:@"¥ %@",_totalPrice];
+    }
+    return _orderPriceLb;
+
+}
+
+- (UILabel *)noticeLb{
+    if (_noticeLb == nil) {
+        _noticeLb = [[UILabel alloc] init];
+        _noticeLb.font = FONT(14);
+        _noticeLb.textColor = BLACKTEXTCOLOR;
+        _noticeLb.text = @"请尽快完成付款，30分钟后订单自动取消";
+    }
+    return _noticeLb;
+}
+
+- (UILabel *)leftTimeTitleLb{
+    if (_leftTimeTitleLb == nil) {
+        _leftTimeTitleLb = [[UILabel alloc] init];
+        _leftTimeTitleLb.font = FONT(12);
+        _leftTimeTitleLb.textColor = BLACKTEXTCOLOR;
+        _leftTimeTitleLb.text = @"剩余时间";
+    }
+    return _leftTimeTitleLb;
+}
+
+- (UILabel *)leftTimeLb{
+    if (_leftTimeLb == nil) {
+        _leftTimeLb = [[UILabel alloc] init];
+        _leftTimeLb.font = FONT(12);
+        _leftTimeLb.textColor = SHENTEXTCOLOR;
+        _leftTimeLb.text = @"30: 00";
+    }
+    return _leftTimeLb;
+}
+
+- (UILabel *)fiveShellTitleLb{
+    if (_fiveShellTitleLb == nil) {
+        _fiveShellTitleLb = [[UILabel alloc] init];
+        _fiveShellTitleLb.font = FONT(14);
+        _fiveShellTitleLb.textColor = BLACKTEXTCOLOR;
+        _fiveShellTitleLb.text = @"五云铢";
+    }
+    return _fiveShellTitleLb;
+}
+
+- (UILabel *)fiveShellLb{
+    if (_fiveShellLb == nil) {
+        _fiveShellLb = [[UILabel alloc] init];
+        _fiveShellLb.font = FONT(14);
+        _fiveShellLb.textColor = LIGHTTEXTCOLOR;
+        _fiveShellLb.text = [NSString stringWithFormat:@"¥ %@", _blancePrice];
+        
+    }
+    return _fiveShellLb;
+}
+
+- (UISwitch *)useShellSwi{
+    if (_useShellSwi == nil) {
+        _useShellSwi = [[UISwitch alloc] init];
+        _useShellSwi.on = YES;
+        _useShellSwi.onTintColor = MALLColor;
+        _useShellSwi.tintColor = GRAYCOLOR;
+        [_useShellSwi addTarget:self action:@selector(useFiveShellAction:) forControlEvents:UIControlEventValueChanged];
+    }
+    return _useShellSwi;
+}
+
+- (UILabel *)payStyleLb{
+    if (_payStyleLb == nil) {
+        _payStyleLb = [[UILabel alloc] init];
+        _payStyleLb.font = FONT(14);
+        _payStyleLb.textColor = BLACKTEXTCOLOR;
+        _payStyleLb.text = @"支付方式";
+    }
+    return _payStyleLb;
+}
+
+- (NSTimer *)timer{
+    if (_timer == nil) {
+        _timer = [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(timeFire:) userInfo:nil repeats:YES];
+    }
+    return _timer;
+}
+
+@end

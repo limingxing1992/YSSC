@@ -1,0 +1,14 @@
+platform :ios, '7.0'
+target 'YSSCIOS' do
+pod 'AFNetworking', '~> 3.1.0'
+pod 'SVProgressHUD', '~> 2.0.3'
+pod 'SDWebImage', '~> 3.8.1'
+pod 'MJExtension', '~> 3.0.11'
+pod 'Reachability', '~> 3.2'
+pod 'JSPatch', '~> 1.1'
+pod 'MJRefresh', '~> 3.1.10'
+pod 'SDAutoLayout', '~> 2.1.4'
+pod 'BaiduMapKit'
+pod 'SDCycleScrollView', '~> 1.65'
+pod 'GTSDK', '1.5.0-noidfa'
+end
